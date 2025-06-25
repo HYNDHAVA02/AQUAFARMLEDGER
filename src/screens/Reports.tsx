@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Calendar } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Tooltip, Legend } from 'recharts';
 import { useExpenses, useMonthlyExpenseTrend, useCategoryBreakdown } from '@/hooks/useExpenses';
 import { usePonds } from '@/hooks/usePonds';
@@ -10,14 +10,25 @@ const Reports: React.FC = () => {
   const { data: monthlyTrend = [] } = useMonthlyExpenseTrend();
   const { data: categoryBreakdown = [] } = useCategoryBreakdown();
   
-  const [selectedPeriod, setSelectedPeriod] = useState('June 2025');
-
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0
     }).format(amount);
+  };
+
+  // Custom Y-axis tick formatter for Indian currency
+  const formatYAxisTick = (value: number) => {
+    // Always show rupee symbol at the start, and avoid overlap by shortening large values
+    if (value >= 10000000) {
+      return `₹${(value / 10000000).toFixed(2)} Cr`;
+    } else if (value >= 100000) {
+      return `₹${(value / 100000).toFixed(2)} L`;
+    } else if (value >= 1000) {
+      return `₹${(value / 1000).toFixed(2)} K`;
+    }
+    return `₹${value.toLocaleString('en-IN')}`;
   };
 
   if (expensesLoading) {
@@ -59,17 +70,30 @@ const Reports: React.FC = () => {
   ];
 
   // --- Pondwise Monthly Trend Data Transformation ---
-  // Get all unique months in the data
-  const allMonths = Array.from(new Set(expenses.map(e => new Date(e.date).toLocaleDateString('en-US', { month: 'short' }))));
-  // Build a map: pondName -> [{ month, amount }]
-  const pondMonthlyData: Record<string, { month: string; amount: number }[]> = {};
-  ponds.forEach(pond => {
-    pondMonthlyData[pond.name] = allMonths.map(month => {
-      const total = expenses
-        .filter(e => e.pond_name === pond.name && new Date(e.date).toLocaleDateString('en-US', { month: 'short' }) === month)
+  // Get all unique months in the data (with year)
+  const allMonths = Array.from(new Set(expenses.map(e => {
+    const d = new Date(e.date);
+    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  })));
+  // Build data: [{ month: 'May 2024', Pond1: 1000, Pond2: 2000, ... }]
+  const pondStackedData = allMonths.map(monthLabel => {
+    const [monthStr, yearStr] = monthLabel.split(' ');
+    const monthIdx = new Date(`${monthStr} 1, ${yearStr}`).getMonth();
+    const year = parseInt(yearStr, 10);
+    const data = { month: monthLabel };
+    ponds.forEach((pond) => {
+      data[pond.name] = expenses
+        .filter(e => {
+          const d = new Date(e.date);
+          return (
+            e.pond_name === pond.name &&
+            d.getMonth() === monthIdx &&
+            d.getFullYear() === year
+          );
+        })
         .reduce((sum, e) => sum + e.amount, 0);
-      return { month, amount: total };
     });
+    return data;
   });
 
   return (
@@ -78,15 +102,6 @@ const Reports: React.FC = () => {
       <div className="bg-white shadow-sm p-4 pt-8">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-        </div>
-        
-        {/* Period Selector */}
-        <div className="relative">
-          <button className="flex items-center bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-medium">
-            <Calendar size={18} className="mr-2" />
-            {selectedPeriod}
-            <ChevronDown size={18} className="ml-2" />
-          </button>
         </div>
       </div>
 
@@ -116,25 +131,16 @@ const Reports: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Pondwise Monthly Trend</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart>
+              <BarChart data={pondStackedData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
-                <YAxis tickFormatter={(value) => `₹${value/1000}K`} />
-                <Tooltip formatter={value => `₹${value}`} />
+                <YAxis tickFormatter={formatYAxisTick} />
+                <Tooltip formatter={value => formatAmount(value)} />
                 <Legend />
-                {ponds.map((pond, index) => (
-                  <Line
-                    key={pond.id}
-                    type="monotone"
-                    dataKey="amount"
-                    data={pondMonthlyData[pond.name]}
-                    stroke={POND_COLORS[index % POND_COLORS.length]}
-                    strokeWidth={2}
-                    dot={{ fill: POND_COLORS[index % POND_COLORS.length], strokeWidth: 2, r: 4 }}
-                    name={pond.name}
-                  />
+                {ponds.map((pond, idx) => (
+                  <Bar key={pond.name} dataKey={pond.name} stackId="a" fill={POND_COLORS[idx % POND_COLORS.length]} name={pond.name} />
                 ))}
-              </LineChart>
+              </BarChart>
             </ResponsiveContainer>
           </div>
           <div className="mt-4 flex flex-wrap gap-4">
@@ -158,7 +164,8 @@ const Reports: React.FC = () => {
               <LineChart data={monthlyTrend}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
-                <YAxis tickFormatter={(value) => `₹${value/1000}K`} />
+                <YAxis tickFormatter={formatYAxisTick} />
+                <Tooltip formatter={value => formatAmount(value)} />
                 <Line 
                   type="monotone" 
                   dataKey="amount" 
@@ -219,8 +226,8 @@ const Reports: React.FC = () => {
               <BarChart data={pondCategoryData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="pond" />
-                <YAxis tickFormatter={value => `₹${value}`} />
-                <Tooltip formatter={value => `₹${value}`} />
+                <YAxis tickFormatter={formatYAxisTick} />
+                <Tooltip formatter={value => formatAmount(value)} />
                 <Legend />
                 {categories.map((cat, idx) => (
                   <Bar key={cat} dataKey={cat} stackId="a" fill={CATEGORY_COLORS[idx % CATEGORY_COLORS.length]} />
