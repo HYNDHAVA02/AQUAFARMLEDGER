@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import BottomNav from '../components/BottomNav';
 import Dashboard from '../screens/Dashboard';
@@ -13,7 +12,7 @@ const Index = () => {
   const renderActiveScreen = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard onNavigateToTransactions={() => setActiveTab('transactions')} />;
       case 'ponds':
         return <Ponds />;
       case 'add-expense':

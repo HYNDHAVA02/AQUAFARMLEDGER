@@ -1,15 +1,17 @@
-
 import React, { useState } from 'react';
 import { Search, Filter, Calendar, ChevronDown } from 'lucide-react';
 import { useExpenses } from '@/hooks/useExpenses';
+import { useDeleteExpense } from '@/hooks/useExpenses';
 import { usePonds } from '@/hooks/usePonds';
 import { useExpenseCategories } from '@/hooks/useExpenseCategories';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import ExpenseCard from '../components/ExpenseCard';
 
 const Transactions: React.FC = () => {
   const { data: expenses = [], isLoading: expensesLoading } = useExpenses();
   const { data: ponds = [] } = usePonds();
   const { data: categories = [] } = useExpenseCategories();
+  const deleteExpense = useDeleteExpense();
   
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPond, setSelectedPond] = useState('All Ponds');
@@ -61,6 +63,16 @@ const Transactions: React.FC = () => {
     });
 
   const totalAmount = filteredTransactions.reduce((sum, expense) => sum + expense.amount, 0);
+
+  const handleDeleteExpense = async (expense: any) => {
+    if (window.confirm(`Are you sure you want to delete this ${expense.category_name} expense?`)) {
+      try {
+        await deleteExpense.mutateAsync(expense.id);
+      } catch (error) {
+        alert('Failed to delete expense. Please try again.');
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -169,32 +181,7 @@ const Transactions: React.FC = () => {
           {filteredTransactions.length > 0 ? (
             <div className="divide-y divide-gray-100">
               {filteredTransactions.map((expense) => (
-                <div key={expense.id} className="p-4 hover:bg-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-medium text-gray-900">{expense.category_name}</h4>
-                        <span className="text-lg font-bold text-green-600">
-                          {formatAmount(expense.amount)}
-                        </span>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600 space-x-4">
-                        <span>{expense.pond_name}</span>
-                        <span>•</span>
-                        <span>
-                          {new Date(expense.date).toLocaleDateString('en-US', { 
-                            day: 'numeric', 
-                            month: 'short',
-                            year: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                      {expense.description && (
-                        <p className="text-sm text-gray-500 mt-1">{expense.description}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <ExpenseCard key={expense.id} expense={expense} onDelete={handleDeleteExpense} />
               ))}
             </div>
           ) : (

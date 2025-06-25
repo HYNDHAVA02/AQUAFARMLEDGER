@@ -6,7 +6,12 @@ import { useAuthContext } from '@/components/AuthProvider';
 import ExpenseCard from '../components/ExpenseCard';
 import Profile from './Profile';
 
-const Dashboard: React.FC = () => {
+// Add prop for navigation
+interface DashboardProps {
+  onNavigateToTransactions?: () => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onNavigateToTransactions }) => {
   const [showProfile, setShowProfile] = useState(false);
   const { profile } = useAuthContext();
   const { data: expenses = [], isLoading: expensesLoading } = useExpenses();
@@ -201,7 +206,12 @@ const Dashboard: React.FC = () => {
         <div>
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-lg font-semibold text-gray-900">Recent Expenses</h3>
-            <button className="text-blue-600 font-medium text-sm">View All</button>
+            <button
+              className="text-blue-600 font-medium text-sm"
+              onClick={onNavigateToTransactions}
+            >
+              View All
+            </button>
           </div>
           <div className="space-y-3">
             {recentExpenses.map((expense) => (
