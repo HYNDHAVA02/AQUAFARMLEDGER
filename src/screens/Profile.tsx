@@ -127,8 +127,18 @@ const Profile: React.FC<ProfileProps> = ({ onBack }) => {
               ) : (
                 <>
                   <h2 className="text-xl font-bold text-gray-900">{profile?.full_name || 'No name set'}</h2>
-                  <p className="text-gray-600">{profile?.email || user?.email}</p>
-                  <p className="text-gray-600">{profile?.phone || 'No phone set'}</p>
+                  <p
+                    className="text-gray-600 break-all md:truncate md:w-full"
+                    title={profile?.email || user?.email || ''}
+                  >
+                    {profile?.email || user?.email}
+                  </p>
+                  <p
+                    className="text-gray-600 break-all md:truncate md:w-full"
+                    title={profile?.phone || 'No phone set'}
+                  >
+                    {profile?.phone || 'No phone set'}
+                  </p>
                 </>
               )}
             </div>
