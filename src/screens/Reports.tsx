@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { ChevronDown, Calendar } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Tooltip, Legend } from 'recharts';
 import { useExpenses, useMonthlyExpenseTrend, useCategoryBreakdown } from '@/hooks/useExpenses';
 import { usePonds } from '@/hooks/usePonds';
 
@@ -40,6 +39,38 @@ const Reports: React.FC = () => {
 
   const COLORS = ['#2196F3', '#009688', '#4CAF50', '#FF9800', '#9C27B0'];
   const POND_COLORS = ['#2196F3', '#009688', '#4CAF50'];
+
+  // --- Stacked Bar Chart Data Transformation ---
+  // Get all unique categories
+  const categories = Array.from(new Set(expenses.map(e => e.category_name)));
+  // Get all unique ponds
+  const pondNames = Array.from(new Set(expenses.map(e => e.pond_name)));
+  // Build data for the chart
+  const pondCategoryData = pondNames.map(pond => {
+    const pondExpenses = expenses.filter(e => e.pond_name === pond);
+    const data: Record<string, any> = { pond };
+    categories.forEach(cat => {
+      data[cat] = pondExpenses.filter(e => e.category_name === cat).reduce((sum, e) => sum + e.amount, 0);
+    });
+    return data;
+  });
+  const CATEGORY_COLORS = [
+    '#2196F3', '#009688', '#4CAF50', '#FF9800', '#9C27B0', '#F44336', '#795548', '#607D8B', '#FFC107', '#8BC34A'
+  ];
+
+  // --- Pondwise Monthly Trend Data Transformation ---
+  // Get all unique months in the data
+  const allMonths = Array.from(new Set(expenses.map(e => new Date(e.date).toLocaleDateString('en-US', { month: 'short' }))));
+  // Build a map: pondName -> [{ month, amount }]
+  const pondMonthlyData: Record<string, { month: string; amount: number }[]> = {};
+  ponds.forEach(pond => {
+    pondMonthlyData[pond.name] = allMonths.map(month => {
+      const total = expenses
+        .filter(e => e.pond_name === pond.name && new Date(e.date).toLocaleDateString('en-US', { month: 'short' }) === month)
+        .reduce((sum, e) => sum + e.amount, 0);
+      return { month, amount: total };
+    });
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -89,13 +120,15 @@ const Reports: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis tickFormatter={(value) => `₹${value/1000}K`} />
+                <Tooltip formatter={value => `₹${value}`} />
+                <Legend />
                 {ponds.map((pond, index) => (
-                  <Line 
+                  <Line
                     key={pond.id}
-                    type="monotone" 
-                    dataKey="amount" 
-                    data={monthlyTrend}
-                    stroke={POND_COLORS[index % POND_COLORS.length]} 
+                    type="monotone"
+                    dataKey="amount"
+                    data={pondMonthlyData[pond.name]}
+                    stroke={POND_COLORS[index % POND_COLORS.length]}
                     strokeWidth={2}
                     dot={{ fill: POND_COLORS[index % POND_COLORS.length], strokeWidth: 2, r: 4 }}
                     name={pond.name}
@@ -175,6 +208,25 @@ const Reports: React.FC = () => {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Category-wise Pond Expenses (Stacked Bar Chart) */}
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Category-wise Pond Expenses</h3>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={pondCategoryData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="pond" />
+                <YAxis tickFormatter={value => `₹${value}`} />
+                <Tooltip formatter={value => `₹${value}`} />
+                <Legend />
+                {categories.map((cat, idx) => (
+                  <Bar key={cat} dataKey={cat} stackId="a" fill={CATEGORY_COLORS[idx % CATEGORY_COLORS.length]} />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
