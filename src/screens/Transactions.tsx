@@ -1,18 +1,26 @@
 import React, { useState } from 'react';
 import { Search, Filter, Calendar, ChevronDown } from 'lucide-react';
 import { useExpenses } from '@/hooks/useExpenses';
-import { useDeleteExpense } from '@/hooks/useExpenses';
+import { useDeleteExpense, useUpdateExpense } from '@/hooks/useExpenses';
 import { usePonds } from '@/hooks/usePonds';
 import { useExpenseCategories } from '@/hooks/useExpenseCategories';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import ExpenseCard from '../components/ExpenseCard';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
+import { Label } from '../components/ui/label';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../components/ui/select';
 
 const Transactions: React.FC = () => {
   const { data: expenses = [], isLoading: expensesLoading } = useExpenses();
   const { data: ponds = [] } = usePonds();
   const { data: categories = [] } = useExpenseCategories();
   const deleteExpense = useDeleteExpense();
-  
+  const updateExpense = useUpdateExpense();
+  const [editingExpense, setEditingExpense] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState<any>({});
+
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPond, setSelectedPond] = useState('All Ponds');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
@@ -71,6 +79,34 @@ const Transactions: React.FC = () => {
       } catch (error) {
         alert('Failed to delete expense. Please try again.');
       }
+    }
+  };
+
+  const handleEditExpense = (expense: any) => {
+    setEditingExpense(expense);
+    setEditForm({
+      ...expense,
+      date: expense.date?.split('T')[0] || '',
+    });
+  };
+
+  const handleEditFormChange = (field: string, value: any) => {
+    setEditForm((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateExpense.mutateAsync({ id: editingExpense.id, updates: {
+        pond_id: ponds.find(p => p.name === editForm.pond_name)?.id,
+        category_id: categories.find(c => c.name === editForm.category_name)?.id,
+        amount: Number(editForm.amount),
+        date: editForm.date,
+        description: editForm.description,
+      }});
+      setEditingExpense(null);
+    } catch (error) {
+      alert('Failed to update expense. Please try again.');
     }
   };
 
@@ -181,7 +217,7 @@ const Transactions: React.FC = () => {
           {filteredTransactions.length > 0 ? (
             <div className="divide-y divide-gray-100">
               {filteredTransactions.map((expense) => (
-                <ExpenseCard key={expense.id} expense={expense} onDelete={handleDeleteExpense} />
+                <ExpenseCard key={expense.id} expense={expense} onDelete={handleDeleteExpense} onEdit={handleEditExpense} />
               ))}
             </div>
           ) : (
@@ -206,6 +242,59 @@ const Transactions: React.FC = () => {
           </button>
         )}
       </div>
+
+      {/* Edit Transaction Modal */}
+      <Dialog open={!!editingExpense} onOpenChange={open => { if (!open) setEditingExpense(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Transaction</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div>
+              <Label>Pond</Label>
+              <Select value={editForm.pond_name} onValueChange={val => handleEditFormChange('pond_name', val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select pond" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ponds.map(pond => (
+                    <SelectItem key={pond.id} value={pond.name}>{pond.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Category</Label>
+              <Select value={editForm.category_name} onValueChange={val => handleEditFormChange('category_name', val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(category => (
+                    <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Amount</Label>
+              <Input type="number" value={editForm.amount} onChange={e => handleEditFormChange('amount', e.target.value)} required />
+            </div>
+            <div>
+              <Label>Date</Label>
+              <Input type="date" value={editForm.date} onChange={e => handleEditFormChange('date', e.target.value)} required />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Input value={editForm.description} onChange={e => handleEditFormChange('description', e.target.value)} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditingExpense(null)}>Cancel</Button>
+              <Button type="submit" disabled={updateExpense.isPending}>Save</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

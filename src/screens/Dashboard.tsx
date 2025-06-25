@@ -1,10 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, User } from 'lucide-react';
-import { useExpenses, useCategoryBreakdown, useDeleteExpense } from '@/hooks/useExpenses';
+import { useExpenses, useCategoryBreakdown, useDeleteExpense, useUpdateExpense } from '@/hooks/useExpenses';
 import { usePonds } from '@/hooks/usePonds';
 import { useAuthContext } from '@/components/AuthProvider';
 import ExpenseCard from '../components/ExpenseCard';
 import Profile from './Profile';
+import { useExpenseCategories } from '@/hooks/useExpenseCategories';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
+import { Label } from '../components/ui/label';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../components/ui/select';
 
 // Add prop for navigation
 interface DashboardProps {
@@ -18,6 +24,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToTransactions }) => {
   const { data: ponds = [], isLoading: pondsLoading } = usePonds();
   const { data: categoryData = [] } = useCategoryBreakdown();
   const deleteExpense = useDeleteExpense();
+  const updateExpense = useUpdateExpense();
+  const { data: categories = [] } = useExpenseCategories();
+  const [editingExpense, setEditingExpense] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState<any>({});
 
   const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
@@ -92,6 +102,34 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToTransactions }) => {
         console.error('Error deleting expense:', error);
         alert(`Failed to delete expense: ${error.message || 'Unknown error'}`);
       }
+    }
+  };
+
+  const handleEditExpense = (expense: any) => {
+    setEditingExpense(expense);
+    setEditForm({
+      ...expense,
+      date: expense.date?.split('T')[0] || '',
+    });
+  };
+
+  const handleEditFormChange = (field: string, value: any) => {
+    setEditForm((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateExpense.mutateAsync({ id: editingExpense.id, updates: {
+        pond_id: ponds.find(p => p.name === editForm.pond_name)?.id,
+        category_id: categories.find(c => c.name === editForm.category_name)?.id,
+        amount: Number(editForm.amount),
+        date: editForm.date,
+        description: editForm.description,
+      }});
+      setEditingExpense(null);
+    } catch (error) {
+      alert('Failed to update expense. Please try again.');
     }
   };
 
@@ -184,21 +222,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToTransactions }) => {
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Pond Overview</h3>
           <div className="space-y-3">
-            {ponds.map((pond) => (
-              <div key={pond.id} className="bg-white rounded-lg shadow-sm p-4 flex justify-between items-center">
-                <div>
-                  <h4 className="font-semibold text-gray-900">{pond.name}</h4>
-                  <p className="text-gray-600 text-sm">{pond.location}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-green-600">{formatAmount(pond.monthly_expense_budget)}</p>
-                  <div className="flex items-center text-green-500 text-sm">
-                    <TrendingUp size={14} className="mr-1" />
-                    <span>12%</span>
+            {ponds.map((pond) => {
+              const pondTotalExpense = expenses
+                .filter(exp => exp.pond_name === pond.name)
+                .reduce((sum, exp) => sum + exp.amount, 0);
+              return (
+                <div key={pond.id} className="bg-white rounded-lg shadow-sm p-4 flex justify-between items-center">
+                  <div>
+                    <h4 className="font-semibold text-gray-900">{pond.name}</h4>
+                    <p className="text-gray-600 text-sm">{pond.location}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-green-600">
+                      {formatAmount(pondTotalExpense)}
+                    </p>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -215,11 +256,64 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToTransactions }) => {
           </div>
           <div className="space-y-3">
             {recentExpenses.map((expense) => (
-              <ExpenseCard key={expense.id} expense={expense} onDelete={handleDeleteExpense} />
+              <ExpenseCard key={expense.id} expense={expense} onDelete={handleDeleteExpense} onEdit={handleEditExpense} />
             ))}
           </div>
         </div>
       </div>
+
+      {/* Edit Transaction Modal */}
+      <Dialog open={!!editingExpense} onOpenChange={open => { if (!open) setEditingExpense(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Transaction</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div>
+              <Label>Pond</Label>
+              <Select value={editForm.pond_name} onValueChange={val => handleEditFormChange('pond_name', val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select pond" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ponds.map(pond => (
+                    <SelectItem key={pond.id} value={pond.name}>{pond.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Category</Label>
+              <Select value={editForm.category_name} onValueChange={val => handleEditFormChange('category_name', val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(category => (
+                    <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Amount</Label>
+              <Input type="number" value={editForm.amount} onChange={e => handleEditFormChange('amount', e.target.value)} required />
+            </div>
+            <div>
+              <Label>Date</Label>
+              <Input type="date" value={editForm.date} onChange={e => handleEditFormChange('date', e.target.value)} required />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Input value={editForm.description} onChange={e => handleEditFormChange('description', e.target.value)} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditingExpense(null)}>Cancel</Button>
+              <Button type="submit" disabled={updateExpense.isPending}>Save</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
