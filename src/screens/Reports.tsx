@@ -109,17 +109,17 @@ const Reports: React.FC = () => {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 gap-4">
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold text-blue-600">{formatAmount(totalExpenses)}</div>
+                <div style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)' }} className="font-bold text-blue-600">{formatAmount(totalExpenses)}</div>
                 <div className="text-gray-600 text-sm">Total Expenses</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-green-600">{formatAmount(averagePerPond)}</div>
+                <div style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)' }} className="font-bold text-green-600">{formatAmount(averagePerPond)}</div>
                 <div className="text-gray-600 text-sm">Average/Pond</div>
               </div>
               <div>
-                <div className="text-sm font-semibold text-orange-600">{topCategory}</div>
+                <div style={{ fontSize: 'clamp(1rem, 3vw, 1.5rem)' }} className="font-semibold text-orange-600">{topCategory}</div>
                 <div className="text-gray-600 text-xs">Top Category</div>
               </div>
             </div>
