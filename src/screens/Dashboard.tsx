@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, User } from 'lucide-react';
+import { TrendingUp, TrendingDown, User, Plus } from 'lucide-react';
 import { useExpenses, useCategoryBreakdown, useDeleteExpense, useUpdateExpense } from '@/hooks/useExpenses';
 import { usePonds } from '@/hooks/usePonds';
 import { useAuthContext } from '@/components/AuthProvider';
@@ -15,9 +15,10 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '.
 // Add prop for navigation
 interface DashboardProps {
   onNavigateToTransactions?: () => void;
+  onAddExpenseForPond?: (pondId: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onNavigateToTransactions }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onNavigateToTransactions, onAddExpenseForPond }) => {
   const [showProfile, setShowProfile] = useState(false);
   const { profile } = useAuthContext();
   const { data: expenses = [], isLoading: expensesLoading } = useExpenses();
@@ -239,7 +240,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToTransactions }) => {
             {ponds.map((pond) => (
               <div key={pond.id} className="bg-white rounded-lg shadow-sm p-4 flex justify-between items-center">
                 <div>
-                  <h4 className="font-semibold text-gray-900">{pond.name}</h4>
+                  <h4 className="font-semibold text-gray-900 flex items-center">
+                    {pond.name}
+                    {onAddExpenseForPond && (
+                      <button
+                        onClick={() => onAddExpenseForPond(pond.id)}
+                        className="ml-2 p-1 rounded-full bg-blue-100 hover:bg-blue-200"
+                        title="Add Expense"
+                      >
+                        <Plus size={18} className="text-blue-600" />
+                      </button>
+                    )}
+                  </h4>
                   <p className="text-gray-600 text-sm">{pond.location}</p>
                 </div>
                 <div className="text-right">

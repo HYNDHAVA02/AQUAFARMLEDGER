@@ -1,21 +1,30 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Check } from 'lucide-react';
 import { usePonds } from '@/hooks/usePonds';
 import { useExpenseCategories } from '@/hooks/useExpenseCategories';
 import { useCreateExpense } from '@/hooks/useExpenses';
 
-const AddExpense: React.FC = () => {
+interface AddExpenseProps {
+  selectedPondId?: string | null;
+}
+
+const AddExpense: React.FC<AddExpenseProps> = ({ selectedPondId }) => {
   const { data: ponds = [], isLoading: pondsLoading } = usePonds();
   const { data: categories = [], isLoading: categoriesLoading } = useExpenseCategories();
   const createExpense = useCreateExpense();
   
-  const [selectedPond, setSelectedPond] = useState('');
+  const [selectedPond, setSelectedPond] = useState(selectedPondId || '');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    if (selectedPondId) {
+      setSelectedPond(selectedPondId);
+    }
+  }, [selectedPondId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -8,21 +8,34 @@ import Transactions from '../screens/Transactions';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [selectedPondId, setSelectedPondId] = useState<string | null>(null);
+
+  const handleAddExpenseForPond = (pondId: string) => {
+    setSelectedPondId(pondId);
+    setActiveTab('add-expense');
+  };
+
+  const handleTabChange = (tab: string) => {
+    if (tab !== 'add-expense') {
+      setSelectedPondId(null);
+    }
+    setActiveTab(tab);
+  };
 
   const renderActiveScreen = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard onNavigateToTransactions={() => setActiveTab('transactions')} />;
+        return <Dashboard onNavigateToTransactions={() => setActiveTab('transactions')} onAddExpenseForPond={handleAddExpenseForPond} />;
       case 'ponds':
         return <Ponds />;
       case 'add-expense':
-        return <AddExpense />;
+        return <AddExpense selectedPondId={selectedPondId} />;
       case 'reports':
         return <Reports />;
       case 'transactions':
         return <Transactions />;
       default:
-        return <Dashboard />;
+        return <Dashboard onAddExpenseForPond={handleAddExpenseForPond} />;
     }
   };
 
@@ -35,7 +48,7 @@ const Index = () => {
       
       {/* Bottom Navigation */}
       <div className="max-w-md mx-auto">
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
     </div>
   );
