@@ -21,6 +21,7 @@ export type Database = {
           farm_name: string | null
           location: string | null
           avatar_url: string | null
+          exists: boolean
           created_at: string
           updated_at: string
         }
@@ -32,6 +33,7 @@ export type Database = {
           farm_name?: string | null
           location?: string | null
           avatar_url?: string | null
+          exists?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -43,6 +45,7 @@ export type Database = {
           farm_name?: string | null
           location?: string | null
           avatar_url?: string | null
+          exists?: boolean
           created_at?: string
           updated_at?: string
         }

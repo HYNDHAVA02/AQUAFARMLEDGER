@@ -119,3 +119,7 @@ When optimizing performance:
 - Use React Query devtools to check cache behavior
 - Memoize expensive calculations with useMemo
 - Monitor network requests for unnecessary API calls
+
+## Memories
+
+- Memorized everything we did in this MD file during the project development

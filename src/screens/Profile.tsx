@@ -13,17 +13,6 @@ const Profile: React.FC<ProfileProps> = ({ onBack }) => {
   const { data: ponds = [] } = usePonds();
   const { data: expenses = [] } = useExpenses();
 
-  // Show loading if profile is still being fetched
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
   const [notifications, setNotifications] = useState(true);
   const [currency, setCurrency] = useState('INR');
   const [isEditing, setIsEditing] = useState(false);
@@ -50,13 +39,42 @@ const Profile: React.FC<ProfileProps> = ({ onBack }) => {
   useEffect(() => {
     if (!loading && !profile && user) {
       // Trigger a manual profile fetch by calling updateProfile with empty object
-      updateProfile({}).catch(() => {});
+      updateProfile({}).catch((error) => {
+        console.log('Profile refresh failed, likely due to invalid session:', error);
+      });
     }
   }, [loading, profile, user, updateProfile]);
 
+  // Show loading if profile is still being fetched
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   const handleLogout = async () => {
     if (window.confirm('Are you sure you want to logout?')) {
-      await signOut();
+      try {
+        console.log('Profile: Starting logout...')
+        await signOut();
+        console.log('Profile: Logout completed')
+      } catch (error: any) {
+        console.error('Profile: Logout failed:', error)
+        
+        // Don't show error for session already missing (expected scenario)
+        if (error.message?.includes('Auth session missing') || 
+            error.name === 'AuthSessionMissingError') {
+          console.log('Profile: Session was already invalid, logout completed')
+        } else {
+          // Show user-friendly error message for other errors
+          alert('Logout failed. Please try again or refresh the page.')
+        }
+      }
     }
   };
 

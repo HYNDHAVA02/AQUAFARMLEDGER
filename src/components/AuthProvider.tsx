@@ -12,6 +12,7 @@ interface AuthContextType {
   updateProfile: (updates: Partial<Profile>) => Promise<{ data: Profile | null; error: Error | null }>
   isAuthenticated: boolean
   needsProfile: boolean
+  isFullyReady: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)

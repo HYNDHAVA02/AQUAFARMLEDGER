@@ -1,7 +1,8 @@
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuthContext } from "@/components/AuthProvider";
 import AuthComponent from "@/components/Auth";
@@ -21,7 +22,27 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  const { isAuthenticated, needsProfile, loading, profile } = useAuthContext();
+  const { isAuthenticated, needsProfile, loading, profile, user, isFullyReady } = useAuthContext();
+  const queryClient = useQueryClient();
+
+  // Clear cache when user changes or logs out
+  React.useEffect(() => {
+    if (!isAuthenticated) {
+      queryClient.clear();
+    }
+  }, [isAuthenticated, queryClient]);
+
+  // Clear cache when user ID changes (different user login)
+  React.useEffect(() => {
+    if (user?.id) {
+      // Only clear if this is a different user than what's in cache
+      const cachedUserId = queryClient.getQueryData(['current-user-id']);
+      if (cachedUserId && cachedUserId !== user.id) {
+        queryClient.clear();
+      }
+      queryClient.setQueryData(['current-user-id'], user.id);
+    }
+  }, [user?.id, queryClient]);
 
   if (loading) {
     return (
@@ -38,9 +59,7 @@ function AppContent() {
     return <AuthComponent />;
   }
 
-  // Only show ProfileSetup if we're sure the profile is incomplete
-  // (not during the initial profile fetch)
-  if (needsProfile && profile !== null) {
+  if (needsProfile) {
     return <ProfileSetup />;
   }
 
