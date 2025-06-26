@@ -28,6 +28,7 @@ export function useUpdatePond() {
       pondService.update(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ponds'] })
+      queryClient.invalidateQueries({ queryKey: ['expenses'] })
     },
   })
 }

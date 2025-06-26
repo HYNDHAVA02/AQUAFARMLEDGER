@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuthContext } from "@/components/AuthProvider";
 import AuthComponent from "@/components/Auth";
 import ProfileSetup from "@/components/ProfileSetup";
+import AuthCacheResetter from "@/components/AuthCacheResetter";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -13,7 +14,6 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes
       retry: 1,
       refetchOnWindowFocus: false,
     },
@@ -58,6 +58,7 @@ function AppContent() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <AuthCacheResetter />
       <TooltipProvider>
         <Toaster />
         <Sonner />

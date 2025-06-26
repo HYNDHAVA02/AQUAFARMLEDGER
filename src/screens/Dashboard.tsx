@@ -31,6 +31,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToTransactions }) => {
 
   const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
+  // Memoize pond expenses for performance
+  const pondExpenses = useMemo(() => {
+    const expensesByPond = new Map<string, number>();
+    for (const expense of expenses) {
+      if (expense.pond_name) {
+        expensesByPond.set(
+          expense.pond_name,
+          (expensesByPond.get(expense.pond_name) || 0) + expense.amount
+        );
+      }
+    }
+    return expensesByPond;
+  }, [expenses]);
+
   // Calculate current month expenses with memoization
   const currentMonthExpenses = useMemo(() => {
     const now = new Date();
@@ -222,24 +236,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToTransactions }) => {
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Pond Overview</h3>
           <div className="space-y-3">
-            {ponds.map((pond) => {
-              const pondTotalExpense = expenses
-                .filter(exp => exp.pond_name === pond.name)
-                .reduce((sum, exp) => sum + exp.amount, 0);
-              return (
-                <div key={pond.id} className="bg-white rounded-lg shadow-sm p-4 flex justify-between items-center">
-                  <div>
-                    <h4 className="font-semibold text-gray-900">{pond.name}</h4>
-                    <p className="text-gray-600 text-sm">{pond.location}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-green-600">
-                      {formatAmount(pondTotalExpense)}
-                    </p>
-                  </div>
+            {ponds.map((pond) => (
+              <div key={pond.id} className="bg-white rounded-lg shadow-sm p-4 flex justify-between items-center">
+                <div>
+                  <h4 className="font-semibold text-gray-900">{pond.name}</h4>
+                  <p className="text-gray-600 text-sm">{pond.location}</p>
                 </div>
-              );
-            })}
+                <div className="text-right">
+                  <p className="text-lg font-bold text-green-600">
+                    {formatAmount(pondExpenses.get(pond.name) || 0)}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

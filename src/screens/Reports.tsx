@@ -135,7 +135,7 @@ const Reports: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis tickFormatter={formatYAxisTick} />
-                <Tooltip formatter={value => formatAmount(value)} />
+                <Tooltip formatter={value => formatAmount(Number(value))} />
                 <Legend />
                 {ponds.map((pond, idx) => (
                   <Bar key={pond.name} dataKey={pond.name} stackId="a" fill={POND_COLORS[idx % POND_COLORS.length]} name={pond.name} />
@@ -165,7 +165,7 @@ const Reports: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis tickFormatter={formatYAxisTick} />
-                <Tooltip formatter={value => formatAmount(value)} />
+                <Tooltip formatter={value => formatAmount(Number(value))} />
                 <Line 
                   type="monotone" 
                   dataKey="amount" 
@@ -227,7 +227,7 @@ const Reports: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="pond" />
                 <YAxis tickFormatter={formatYAxisTick} />
-                <Tooltip formatter={value => formatAmount(value)} />
+                <Tooltip formatter={value => formatAmount(Number(value))} />
                 <Legend />
                 {categories.map((cat, idx) => (
                   <Bar key={cat} dataKey={cat} stackId="a" fill={CATEGORY_COLORS[idx % CATEGORY_COLORS.length]} />

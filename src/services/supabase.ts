@@ -19,7 +19,7 @@ export const pondService = {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) throw new Error(`Error fetching ponds: ${error.message}`);
     return data || []
   },
 
@@ -47,13 +47,13 @@ export const pondService = {
 
     if (error) {
       if (error.code === '23503') {
-        throw new Error('Foreign key constraint failed. Profile reference issue.');
+        throw new Error('Failed to create pond. Please ensure all related data (like your profile) is correct.');
       } else if (error.code === '42501') {
         throw new Error('Permission denied. RLS policy issue.');
       } else if (error.code === '23502') {
         throw new Error('Required field missing or null.');
       } else {
-        throw new Error(`Database error: ${error.message} (Code: ${error.code})`);
+        throw new Error(`Error creating pond: ${error.message}`);
       }
     }
     
@@ -68,7 +68,7 @@ export const pondService = {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) throw new Error(`Error updating pond ${id}: ${error.message}`);
     return data
   },
 
@@ -78,7 +78,7 @@ export const pondService = {
       .delete()
       .eq('id', id)
 
-    if (error) throw error
+    if (error) throw new Error(`Error deleting pond ${id}: ${error.message}`);
   }
 }
 
@@ -94,7 +94,7 @@ export const expenseService = {
       `)
       .order('date', { ascending: false })
 
-    if (error) throw error
+    if (error) throw new Error(`Error fetching expenses: ${error.message}`);
     
     return (data || []).map(expense => ({
       ...expense,
@@ -113,7 +113,7 @@ export const expenseService = {
       .eq('pond_id', pondId)
       .order('date', { ascending: false })
 
-    if (error) throw error
+    if (error) throw new Error(`Error fetching expenses for pond ${pondId}: ${error.message}`);
     
     return (data || []).map(expense => ({
       ...expense,
@@ -142,11 +142,11 @@ export const expenseService = {
 
     if (error) {
       if (error.code === '23503') {
-        throw new Error('Foreign key constraint failed. Check pond/category reference.');
+        throw new Error('Failed to create expense. Please ensure the selected pond and category exist.');
       } else if (error.code === '42501') {
         throw new Error('Permission denied. RLS policy issue.');
       } else {
-        throw new Error(`Database error: ${error.message} (Code: ${error.code})`);
+        throw new Error(`Error creating expense: ${error.message}`);
       }
     }
 
@@ -161,7 +161,7 @@ export const expenseService = {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) throw new Error(`Error updating expense ${id}: ${error.message}`);
     return data
   },
 
@@ -171,7 +171,7 @@ export const expenseService = {
       .delete()
       .eq('id', id)
 
-    if (error) throw error
+    if (error) throw new Error(`Error deleting expense ${id}: ${error.message}`);
   },
 
   // Analytics functions
@@ -182,7 +182,7 @@ export const expenseService = {
       .gte('date', `${year}-01-01`)
       .lte('date', `${year}-12-31`)
 
-    if (error) throw error
+    if (error) throw new Error(`Error fetching monthly totals: ${error.message}`);
 
     // Group by month
     const monthlyTotals = (data || []).reduce((acc, expense) => {
@@ -205,15 +205,15 @@ export const expenseService = {
         expense_categories(name)
       `)
 
-    if (error) throw error
+    if (error) throw new Error(`Error fetching category breakdown: ${error.message}`);
 
     const colors = ['#2196F3', '#009688', '#4CAF50', '#FF9800', '#9C27B0', '#F44336', '#795548']
     
     const categoryTotals = (data || []).reduce((acc, expense) => {
-      const categoryName = (expense as { expense_categories?: { name: string } }).expense_categories?.name || 'Other'
-      acc[categoryName] = (acc[categoryName] || 0) + expense.amount
-      return acc
-    }, {} as Record<string, number>)
+      const categoryName = (expense as any).expense_categories?.name || 'Other';
+      acc[categoryName] = (acc[categoryName] || 0) + expense.amount;
+      return acc;
+    }, {} as Record<string, number>);
 
     return Object.entries(categoryTotals).map(([name, value], index) => ({
       name,
@@ -231,7 +231,7 @@ export const expenseCategoryService = {
       .select('*')
       .order('name')
 
-    if (error) throw error
+    if (error) throw new Error(`Error fetching expense categories: ${error.message}`);
     return data || []
   }
 }
@@ -248,7 +248,10 @@ export const profileService = {
       .eq('id', user.id)
       .single()
 
-    if (error) throw error
+    if (error) {
+      if (error.code === 'PGRST116') return null // No profile found, not an error
+      throw new Error(`Error fetching profile: ${error.message}`);
+    }
     return data
   }
 }

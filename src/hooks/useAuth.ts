@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
@@ -21,9 +21,45 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
   const [fetchingProfile, setFetchingProfile] = useState(false)
 
+  const fetchProfile = useCallback(async (userId: string) => {
+    // Prevent multiple simultaneous profile fetches
+    if (fetchingProfile) return
+    
+    setFetchingProfile(true)
+    
+    try {
+      // Simple profile fetch with timeout
+      const profilePromise = supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout')), 5000)
+      )
+
+      const { data, error } = await Promise.race([profilePromise, timeoutPromise])
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          setProfile(null) // No profile found
+        }
+        // Keep existing profile on other errors
+      } else {
+        setProfile(data)
+      }
+    } catch (error) {
+      // Keep existing profile on timeout/error
+    } finally {
+      setFetchingProfile(false)
+      setLoading(false)
+    }
+  }, [fetchingProfile]);
+
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
@@ -52,43 +88,7 @@ export function useAuth() {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
-
-  const fetchProfile = async (userId: string) => {
-    // Prevent multiple simultaneous profile fetches
-    if (fetchingProfile) return
-    
-    setFetchingProfile(true)
-    
-    try {
-      // Simple profile fetch with timeout
-      const profilePromise = supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout')), 5000)
-      )
-
-      const { data, error } = await Promise.race([profilePromise, timeoutPromise])
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          setProfile(null) // No profile found
-        }
-        // Keep existing profile on other errors
-      } else {
-        setProfile(data)
-      }
-    } catch (error) {
-      // Keep existing profile on timeout/error
-    } finally {
-      setFetchingProfile(false)
-      setLoading(false)
-    }
-  }
+  }, [fetchProfile])
 
   const signOut = async () => {
     await supabase.auth.signOut()
